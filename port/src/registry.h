@@ -40,6 +40,7 @@ void mark_admin_only(const std::string& category);
 void set_search_active(bool on);
 bool search_active();
 void refresh_search_query(); // reads /sdcard/iiMenu/search.txt
+void set_search_query_direct(const std::string& q); // for in-menu keyboard
 const std::string& search_query();
 std::vector<Mod*> page_mods_visible(const std::string& category);
 

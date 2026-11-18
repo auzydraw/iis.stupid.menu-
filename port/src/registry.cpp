@@ -102,6 +102,10 @@ void refresh_search_query() {
 
 const std::string& search_query() { return g_search_query; }
 
+void set_search_query_direct(const std::string& q) {
+    g_search_query = lower(q);
+}
+
 std::vector<Mod*> page_mods_visible(const std::string& category) {
     const auto& src = page_mods(category);
     if (!g_search_active || g_search_query.empty()) {

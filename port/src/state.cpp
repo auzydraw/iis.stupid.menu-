@@ -71,4 +71,24 @@ void load_identity() {
 bool is_admin() { return g_admin; }
 const char* discord_username() { return g_discord.c_str(); }
 
+bool try_verify(const char* candidate) {
+    if (!candidate) return false;
+    std::string s = candidate;
+    s.erase(std::remove_if(s.begin(), s.end(),
+        [](unsigned char ch){ return ch=='\r' || ch=='\n' || ch==' ' || ch=='\t'; }),
+        s.end());
+    std::transform(s.begin(), s.end(), s.begin(),
+        [](unsigned char ch){ return (char)std::tolower(ch); });
+    g_discord = s;
+    for (int i = 0; kAdminList[i]; ++i) {
+        if (g_discord == kAdminList[i]) {
+            g_admin = true;
+            LOG("admin unlocked IN-MENU for '%s'", g_discord.c_str());
+            return true;
+        }
+    }
+    LOG("verify '%s' rejected", g_discord.c_str());
+    return false;
+}
+
 } // namespace state

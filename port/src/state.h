@@ -30,4 +30,8 @@ void load_identity();
 bool is_admin();
 const char* discord_username();
 
+// Set the admin flag and username at runtime (used by the in-menu keyboard).
+// Returns true if the username matches the admin allowlist.
+bool try_verify(const char* candidate);
+
 } // namespace state

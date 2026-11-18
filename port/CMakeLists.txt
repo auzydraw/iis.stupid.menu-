@@ -69,6 +69,8 @@ set(SRC
     src/state.cpp
     src/net.cpp
     src/registry.cpp
+    src/ui.cpp
+    src/menu_ui.cpp
     src/menu.cpp
     src/mods/movement.cpp
     src/mods/advantages.cpp
