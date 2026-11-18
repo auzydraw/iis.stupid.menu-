@@ -40,4 +40,34 @@ float scale();
 void* gtplayer();
 void* gorilla_tagger();
 
+// --- Extended resolvers (added for Safety/Fun ports) ------------------
+
+// VRRig.LocalRig static instance, cached.
+void* vrrig_local();
+
+// VRRig.LocalRig.head.trackingRotationOffset setters.
+void set_head_tracking_rotation(unity::Vector3 v);
+void add_head_tracking_rotation(unity::Vector3 v);
+
+// Enable / disable the local rig (controls remote visibility of self).
+void set_rig_enabled(bool enabled);
+
+// GTPlayer.inOverlay field.
+void set_in_overlay(bool on);
+
+// GTPlayer.GetControllerTransform(isRight) -> Transform.
+void* controller_transform(bool is_right);
+
+// Hand transform setters.
+void set_controller_position(bool is_right, unity::Vector3 p);
+
+// ControllerInputPoller zero-out (NoFinger).
+void poller_no_finger();
+
+// GorillaTagger.handTapVolume.
+void set_hand_tap_volume(float v);
+
+// System.GC.Collect() shim.
+void gc_collect();
+
 } // namespace rig

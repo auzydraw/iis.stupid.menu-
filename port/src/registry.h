@@ -28,6 +28,21 @@ const std::vector<Mod>& all();
 const std::vector<std::string>& pages();
 const std::vector<Mod*>& page_mods(const std::string& category);
 
+// Visible pages: honors the admin gate (admin-only pages are hidden if the
+// discord gate didn't match).
+std::vector<std::string> visible_pages();
+
+// Mark a page as admin-only. Only visible when state::is_admin() is true.
+void mark_admin_only(const std::string& category);
+
+// Search: if active, page_mods_visible filters by case-insensitive substring
+// match on mod name.
+void set_search_active(bool on);
+bool search_active();
+void refresh_search_query(); // reads /sdcard/iiMenu/search.txt
+const std::string& search_query();
+std::vector<Mod*> page_mods_visible(const std::string& category);
+
 void tick_enabled();
 
 // Load/save enabled-state map to /sdcard/iiMenu/config.ini (auto-created).

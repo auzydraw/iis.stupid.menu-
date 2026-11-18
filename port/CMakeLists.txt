@@ -77,6 +77,7 @@ set(SRC
     src/mods/overpowered.cpp
     src/mods/safety.cpp
     src/mods/detected.cpp
+    src/mods/admin.cpp
     src/mods/credits.cpp
 )
 

@@ -2,6 +2,7 @@
 #include "il2cpp.h"
 #include <android/log.h>
 #include <cstring>
+#include <initializer_list>
 
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "iistupid/rig", __VA_ARGS__)
 
@@ -37,8 +38,36 @@ struct Cached {
     void* (*gt_get_instance)() = nullptr;
     int32_t gt_off_rigidbody = -1;
     int32_t gt_off_head_collider = -1;
+    int32_t gt_off_left_hand_transform  = -1;
+    int32_t gt_off_right_hand_transform = -1;
+    int32_t gt_off_hand_tap_volume      = -1;
+
+    // GTPlayer extras.
+    int32_t off_in_overlay = -1;
+    void* (*gtp_get_controller_tf)(void* self, bool is_right) = nullptr;
+
+    // VRRig.LocalRig chain.
+    void* (*vrrig_get_local)() = nullptr;
+    int32_t vr_off_enabled      = -1;
+    int32_t vr_off_head         = -1;
+    int32_t head_off_tracking_rot = -1;
+
+    // ControllerInputPoller.instance + fields.
+    void* (*cip_get_instance)() = nullptr;
+    int32_t cip_off_left_grip  = -1;
+    int32_t cip_off_right_grip = -1;
+    int32_t cip_off_left_idx   = -1;
+    int32_t cip_off_right_idx  = -1;
+    int32_t cip_off_left_a     = -1;
+    int32_t cip_off_right_a    = -1;
+    int32_t cip_off_left_b     = -1;
+    int32_t cip_off_right_b    = -1;
+
+    // System.GC.Collect()
+    void (*gc_collect_fn)() = nullptr;
 
     bool resolved{};
+    bool ext_resolved{};
 };
 
 Cached c{};
@@ -121,6 +150,10 @@ void resolve_once() {
         c.off_rigidbody     = off("playerRigidBody");
         if (c.off_rigidbody < 0) c.off_rigidbody = off("rigidBody");
         c.off_scale         = off("scale");
+        c.off_in_overlay    = off("inOverlay");
+
+        c.gtp_get_controller_tf = (decltype(c.gtp_get_controller_tf))method_get_pointer(
+            class_get_method_from_name(gtp, "GetControllerTransform", 1));
     }
 
     Il2CppClass* gt = class_from_name(game, "", "GorillaTagger");
@@ -133,6 +166,56 @@ void resolve_once() {
         };
         c.gt_off_rigidbody     = off("rigidbody");
         c.gt_off_head_collider = off("headCollider");
+        c.gt_off_left_hand_transform  = off("leftHandTransform");
+        c.gt_off_right_hand_transform = off("rightHandTransform");
+        c.gt_off_hand_tap_volume      = off("handTapVolume");
+    }
+
+    // VRRig.LocalRig + VRMap head chain
+    if (Il2CppClass* vrrig = class_from_name(game, "", "VRRig")) {
+        c.vrrig_get_local = (decltype(c.vrrig_get_local))method_get_pointer(
+            class_get_method_from_name(vrrig, "get_LocalRig", 0));
+        auto off = [&](const char* n) {
+            FieldInfo* f = class_get_field_from_name(vrrig, n);
+            return f ? field_get_offset(f) : -1;
+        };
+        c.vr_off_enabled = off("enabled");
+        c.vr_off_head    = off("head");
+    }
+    if (Il2CppClass* vrmap = class_from_name(game, "", "VRMap")) {
+        FieldInfo* f = class_get_field_from_name(vrmap, "trackingRotationOffset");
+        c.head_off_tracking_rot = f ? field_get_offset(f) : -1;
+    }
+
+    // ControllerInputPoller.instance
+    if (Il2CppClass* cip = class_from_name(game, "", "ControllerInputPoller")) {
+        c.cip_get_instance = (decltype(c.cip_get_instance))method_get_pointer(
+            class_get_method_from_name(cip, "get_instance", 0));
+        auto off = [&](const char* n) {
+            FieldInfo* f = class_get_field_from_name(cip, n);
+            return f ? field_get_offset(f) : -1;
+        };
+        c.cip_off_left_grip  = off("leftControllerGripFloat");
+        c.cip_off_right_grip = off("rightControllerGripFloat");
+        c.cip_off_left_idx   = off("leftControllerIndexFloat");
+        c.cip_off_right_idx  = off("rightControllerIndexFloat");
+        c.cip_off_left_a     = off("leftControllerPrimaryButton");
+        c.cip_off_right_a    = off("rightControllerPrimaryButton");
+        c.cip_off_left_b     = off("leftControllerSecondaryButton");
+        c.cip_off_right_b    = off("rightControllerSecondaryButton");
+    }
+
+    // System.GC.Collect
+    for (const char* lib : {"mscorlib.dll", "System.dll", "netstandard.dll"}) {
+        Il2CppImage* im = find_image(lib);
+        if (!im) continue;
+        if (Il2CppClass* gc = class_from_name(im, "System", "GC")) {
+            const MethodInfo* m = class_get_method_from_name(gc, "Collect", 0);
+            if (m) {
+                c.gc_collect_fn = (decltype(c.gc_collect_fn))method_get_pointer(m);
+                break;
+            }
+        }
     }
 
     c.resolved = true;
@@ -229,6 +312,81 @@ void add_force(unity::Vector3 f) {
 void translate(unity::Vector3 delta) {
     if (delta.x == 0 && delta.y == 0 && delta.z == 0) return;
     set_body_position(body_position() + delta);
+}
+
+// --- Extended resolvers ------------------------------------------------
+
+void* vrrig_local() {
+    return c.vrrig_get_local ? c.vrrig_get_local() : nullptr;
+}
+
+void set_head_tracking_rotation(unity::Vector3 v) {
+    void* rig = vrrig_local();
+    if (!rig || c.vr_off_head < 0 || c.head_off_tracking_rot < 0) return;
+    void* head = field<void*>(rig, c.vr_off_head);
+    if (!head) return;
+    *reinterpret_cast<unity::Vector3*>(reinterpret_cast<uint8_t*>(head) + c.head_off_tracking_rot) = v;
+}
+
+void add_head_tracking_rotation(unity::Vector3 v) {
+    void* rig = vrrig_local();
+    if (!rig || c.vr_off_head < 0 || c.head_off_tracking_rot < 0) return;
+    void* head = field<void*>(rig, c.vr_off_head);
+    if (!head) return;
+    auto* p = reinterpret_cast<unity::Vector3*>(reinterpret_cast<uint8_t*>(head) + c.head_off_tracking_rot);
+    p->x += v.x; p->y += v.y; p->z += v.z;
+}
+
+void set_rig_enabled(bool enabled) {
+    void* rig = vrrig_local();
+    if (!rig || c.vr_off_enabled < 0) return;
+    *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(rig) + c.vr_off_enabled) = enabled;
+}
+
+void set_in_overlay(bool on) {
+    if (!c.gtplayer || c.off_in_overlay < 0) return;
+    *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(c.gtplayer) + c.off_in_overlay) = on;
+}
+
+void* controller_transform(bool is_right) {
+    if (!c.gtplayer || !c.gtp_get_controller_tf) return nullptr;
+    return c.gtp_get_controller_tf(c.gtplayer, is_right);
+}
+
+void set_controller_position(bool is_right, unity::Vector3 p) {
+    void* tf = controller_transform(is_right);
+    if (tf && c.transform_set_position) c.transform_set_position(tf, p);
+}
+
+void poller_no_finger() {
+    if (!c.cip_get_instance) return;
+    void* inst = c.cip_get_instance();
+    if (!inst) return;
+    auto zero_f = [&](int32_t off) {
+        if (off < 0) return;
+        *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(inst) + off) = 0.f;
+    };
+    auto zero_b = [&](int32_t off) {
+        if (off < 0) return;
+        *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(inst) + off) = false;
+    };
+    zero_f(c.cip_off_left_grip);
+    zero_f(c.cip_off_right_grip);
+    zero_f(c.cip_off_left_idx);
+    zero_f(c.cip_off_right_idx);
+    zero_b(c.cip_off_left_a);
+    zero_b(c.cip_off_right_a);
+    zero_b(c.cip_off_left_b);
+    zero_b(c.cip_off_right_b);
+}
+
+void set_hand_tap_volume(float v) {
+    if (!c.gorilla_tagger || c.gt_off_hand_tap_volume < 0) return;
+    *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(c.gorilla_tagger) + c.gt_off_hand_tap_volume) = v;
+}
+
+void gc_collect() {
+    if (c.gc_collect_fn) c.gc_collect_fn();
 }
 
 } // namespace rig

@@ -6,8 +6,11 @@
 #include "../il2cpp.h"
 #include "../unity.h"
 
+#include <android/log.h>
 #include <cmath>
 #include <vector>
+
+#define LOG(...) __android_log_print(ANDROID_LOG_INFO, "iistupid/fun", __VA_ARGS__)
 
 using unity::Vector3;
 
@@ -147,6 +150,44 @@ void spin_tick() {
                             c.z + std::sin(t * 4.f) * r * dt()});
 }
 
+// --- Head trick family (from PC Fun.cs) ---------------------------------
+
+void fix_head_tick()         { rig::set_head_tracking_rotation({0, 0, 0}); }
+void upside_down_head_tick() { rig::set_head_tracking_rotation({0, 0, 180}); }
+void broken_neck_tick()      { rig::set_head_tracking_rotation({0, 0, 90}); }
+void backwards_head_tick()   { rig::set_head_tracking_rotation({0, 180, 0}); }
+void sideways_head_tick()    { rig::set_head_tracking_rotation({0, 90, 0}); }
+
+void head_spin_x_tick() { rig::add_head_tracking_rotation({8.f, 0, 0}); }
+void head_spin_y_tick() { rig::add_head_tracking_rotation({0, 8.f, 0}); }
+void head_spin_z_tick() { rig::add_head_tracking_rotation({0, 0, 8.f}); }
+
+void head_spin_reset(bool on) { if (!on) rig::set_head_tracking_rotation({0, 0, 0}); }
+
+// --- Hand tap volume -----------------------------------------------------
+
+void fix_hand_taps_tick()    { rig::set_hand_tap_volume(0.1f); }
+void loud_hand_taps_tick()   { rig::set_hand_tap_volume(99999.f); }
+void silent_hand_taps_tick() { rig::set_hand_tap_volume(0.f); }
+
+// --- Flip hands ---------------------------------------------------------
+
+void flip_hands_tick() {
+    // Swap the left/right controller transforms' positions each frame.
+    Vector3 lh = rig::left_hand_position();
+    Vector3 rh = rig::right_hand_position();
+    rig::set_controller_position(true,  lh);
+    rig::set_controller_position(false, rh);
+}
+
+// --- Copy Self ID -------------------------------------------------------
+
+void copy_self_id_tick() {
+    static int sentinel = 0;
+    if ((sentinel++ % 120) != 0) return;
+    LOG("discord='%s' admin=%d", state::discord_username(), state::is_admin());
+}
+
 } // namespace
 
 void register_all() {
@@ -157,6 +198,19 @@ void register_all() {
     add("Earthquake", "Fun Mods", earthquake_tick);
     add("Head Bob",   "Fun Mods", head_bob_tick);
     add("Wobble",     "Fun Mods", wobble_tick);
+    add("Fix Head",          "Fun Mods", fix_head_tick);
+    add("Upside Down Head",  "Fun Mods", upside_down_head_tick, head_spin_reset);
+    add("Broken Neck",       "Fun Mods", broken_neck_tick,      head_spin_reset);
+    add("Backwards Head",    "Fun Mods", backwards_head_tick,   head_spin_reset);
+    add("Sideways Head",     "Fun Mods", sideways_head_tick,    head_spin_reset);
+    add("Head Spin X",       "Fun Mods", head_spin_x_tick,      head_spin_reset);
+    add("Head Spin Y",       "Fun Mods", head_spin_y_tick,      head_spin_reset);
+    add("Head Spin Z",       "Fun Mods", head_spin_z_tick,      head_spin_reset);
+    add("Fix Hand Taps",     "Fun Mods", fix_hand_taps_tick);
+    add("Loud Hand Taps",    "Fun Mods", loud_hand_taps_tick);
+    add("Silent Hand Taps",  "Fun Mods", silent_hand_taps_tick);
+    add("Flip Hands",        "Fun Mods", flip_hands_tick);
+    add("Copy Self ID",      "Fun Mods", copy_self_id_tick);
     add("Spin",       "Fun Mods", spin_tick);
 }
 

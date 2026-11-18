@@ -21,4 +21,13 @@ Globals& g();
 // Called from the tick each frame; updates delta_time via Time.deltaTime.
 void refresh_time();
 
+// --- Admin identity -------------------------------------------------------
+
+// One-shot: reads /sdcard/iiMenu/discord_user.txt and sets admin flag if the
+// (trimmed, lowercased) username matches the admin allowlist.
+void load_identity();
+
+bool is_admin();
+const char* discord_username();
+
 } // namespace state
