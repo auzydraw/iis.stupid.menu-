@@ -70,8 +70,11 @@ set(SRC
     src/registry.cpp
     src/menu.cpp
     src/mods/movement.cpp
-    src/mods/fun.cpp
+    src/mods/advantages.cpp
     src/mods/visuals.cpp
+    src/mods/fun.cpp
+    src/mods/overpowered.cpp
+    src/mods/safety.cpp
 )
 
 add_library(iistupid SHARED ${SRC})

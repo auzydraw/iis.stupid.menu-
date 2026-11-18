@@ -21,8 +21,12 @@ void set(const std::string& name, bool on);
 bool get(const std::string& name);
 void toggle(const std::string& name);
 
-// Enumerate (sorted by category, then name).
+// Enumerate (order of registration).
 const std::vector<Mod>& all();
+
+// Pages: distinct categories in registration order, and the mods in each.
+const std::vector<std::string>& pages();
+const std::vector<Mod*>& page_mods(const std::string& category);
 
 void tick_enabled();
 

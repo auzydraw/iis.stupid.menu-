@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <unordered_map>
 #include <sys/stat.h>
 #include <android/log.h>
 
@@ -14,11 +15,23 @@ namespace registry {
 
 namespace {
 std::vector<Mod> g_mods;
+std::vector<std::string> g_pages;
+std::unordered_map<std::string, std::vector<Mod*>> g_page_mods;
 std::mutex g_mu;
 
 Mod* find_locked(const std::string& name) {
     for (auto& m : g_mods) if (m.name == name) return &m;
     return nullptr;
+}
+
+void rebuild_pages_locked() {
+    g_pages.clear();
+    g_page_mods.clear();
+    for (auto& m : g_mods) {
+        auto& list = g_page_mods[m.category];
+        if (list.empty()) g_pages.push_back(m.category);
+        list.push_back(&m);
+    }
 }
 
 constexpr const char* kConfigDir  = "/sdcard/iiMenu";
@@ -29,6 +42,15 @@ void add(std::string name, std::string category, std::function<void()> tick,
          std::function<void(bool)> toggled) {
     std::lock_guard lk(g_mu);
     g_mods.push_back({std::move(name), std::move(category), false, std::move(tick), std::move(toggled)});
+    rebuild_pages_locked();
+}
+
+const std::vector<std::string>& pages() { return g_pages; }
+
+const std::vector<Mod*>& page_mods(const std::string& category) {
+    static const std::vector<Mod*> empty;
+    auto it = g_page_mods.find(category);
+    return it == g_page_mods.end() ? empty : it->second;
 }
 
 void set(const std::string& name, bool on) {
@@ -98,15 +120,22 @@ void save_config() {
 } // namespace registry
 
 // --- Core registration lives in mods/*.cpp via register_* funcs. ---
-namespace mods::movement { void register_all(); }
-namespace mods::fun      { void register_all(); }
-namespace mods::visuals  { void register_all(); }
+namespace mods::movement    { void register_all(); }
+namespace mods::advantages  { void register_all(); }
+namespace mods::visuals     { void register_all(); }
+namespace mods::fun         { void register_all(); }
+namespace mods::overpowered { void register_all(); }
+namespace mods::safety      { void register_all(); }
 
 namespace registry {
 void register_core() {
+    // Registration order controls page order in the menu.
+    mods::safety::register_all();
     mods::movement::register_all();
-    mods::fun::register_all();
+    mods::advantages::register_all();
     mods::visuals::register_all();
-    LOG("registered %zu mods", g_mods.size());
+    mods::fun::register_all();
+    mods::overpowered::register_all();
+    LOG("registered %zu mods across %zu pages", g_mods.size(), g_pages.size());
 }
 }
