@@ -7,24 +7,37 @@
 #include "menu.h"
 
 #include <dlfcn.h>
-#include <dobby.h>
+#include <shadowhook.h>
 #include <android/log.h>
 
 #define LOG(...) __android_log_print(ANDROID_LOG_INFO, "iistupid/hook", __VA_ARGS__)
 
 namespace hook {
 
+namespace { bool s_sh_init = false; }
+
+static void ensure_init() {
+    if (s_sh_init) return;
+    shadowhook_init(SHADOWHOOK_MODE_UNIQUE, false);
+    s_sh_init = true;
+}
+
 bool install(void* target, void* replacement, void** orig) {
     if (!target) return false;
-    return DobbyHook(target, replacement, orig) == 0;
+    ensure_init();
+    void* stub = shadowhook_hook_func_addr(target, replacement, orig);
+    if (!stub) {
+        LOG("shadowhook_hook_func_addr failed: %d (%s)",
+            shadowhook_get_errno(), shadowhook_to_errmsg(shadowhook_get_errno()));
+        return false;
+    }
+    return true;
 }
 
 bool install_sym(const char* module, const char* symbol, void* replacement, void** orig) {
-    void* mod = dlopen(module, RTLD_NOW | RTLD_NOLOAD);
-    if (!mod) return false;
-    void* sym = dlsym(mod, symbol);
-    if (!sym) return false;
-    return install(sym, replacement, orig);
+    ensure_init();
+    void* stub = shadowhook_hook_sym_name(module, symbol, replacement, orig);
+    return stub != nullptr;
 }
 
 namespace {

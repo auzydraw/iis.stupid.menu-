@@ -27,14 +27,38 @@ endif()
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 FetchContent_Declare(
-    dobby
-    GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-    GIT_TAG master
+    shadowhook
+    GIT_REPOSITORY https://github.com/bytedance/android-inline-hook.git
+    GIT_TAG v1.1.1
     GIT_SHALLOW TRUE
 )
-set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
-set(DOBBY_DEBUG OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(dobby)
+FetchContent_GetProperties(shadowhook)
+if(NOT shadowhook_POPULATED)
+    FetchContent_Populate(shadowhook)
+endif()
+
+set(SH_ROOT ${shadowhook_SOURCE_DIR}/shadowhook/src/main/cpp)
+if(${ANDROID_ABI} STREQUAL "arm64-v8a")
+    set(SH_ARCH arm64)
+elseif(${ANDROID_ABI} STREQUAL "armeabi-v7a")
+    set(SH_ARCH arm)
+endif()
+file(GLOB SH_SRC
+    ${SH_ROOT}/*.c
+    ${SH_ROOT}/arch/${SH_ARCH}/*.c
+    ${SH_ROOT}/common/*.c
+    ${SH_ROOT}/third_party/*/*.c)
+# Exclude the JNI shim; we don't expose shadowhook through Java.
+list(FILTER SH_SRC EXCLUDE REGEX "sh_jni\\.c$")
+add_library(shadowhook_static STATIC ${SH_SRC})
+target_include_directories(shadowhook_static PUBLIC
+    ${SH_ROOT} ${SH_ROOT}/include ${SH_ROOT}/arch/${SH_ARCH}
+    ${SH_ROOT}/common ${SH_ROOT}/third_party/xdl
+    ${SH_ROOT}/third_party/bsd ${SH_ROOT}/third_party/lss)
+target_compile_options(shadowhook_static PRIVATE
+    -std=c17 -O2 -ffunction-sections -fdata-sections
+    -Wno-everything)
+target_link_libraries(shadowhook_static PUBLIC log)
 
 set(SRC
     src/main.cpp
@@ -51,6 +75,6 @@ set(SRC
 )
 
 add_library(iistupid SHARED ${SRC})
-target_include_directories(iistupid PRIVATE src ${dobby_SOURCE_DIR}/include)
-target_link_libraries(iistupid PRIVATE dobby_static log android)
+target_include_directories(iistupid PRIVATE src)
+target_link_libraries(iistupid PRIVATE shadowhook_static log android)
 set_target_properties(iistupid PROPERTIES OUTPUT_NAME "iistupid")

@@ -99,10 +99,12 @@ void resolve_once() {
     c.component_get_transform= (decltype(c.component_get_transform))method_get_pointer(
         class_get_method_from_name(cp, "get_transform", 0));
 
+    // Unity 2022.3.x on Quest uses set_velocity; the rename to set_linearVelocity
+    // happens in 2022.3.17+/Unity 6. Try the legacy name first for GT's current build.
     c.rb_set_velocity = (decltype(c.rb_set_velocity))method_get_pointer(
-        class_get_method_from_name(rb, "set_linearVelocity", 1));
-    if (!c.rb_set_velocity) c.rb_set_velocity = (decltype(c.rb_set_velocity))method_get_pointer(
         class_get_method_from_name(rb, "set_velocity", 1));
+    if (!c.rb_set_velocity) c.rb_set_velocity = (decltype(c.rb_set_velocity))method_get_pointer(
+        class_get_method_from_name(rb, "set_linearVelocity", 1));
     c.rb_add_force = (decltype(c.rb_add_force))method_get_pointer(
         class_get_method_from_name(rb, "AddForce", 2));
 

@@ -22,6 +22,11 @@ using fn_class_get_method_from_name = const MethodInfo*(*)(Il2CppClass*, const c
 using fn_class_get_field_from_name = FieldInfo*(*)(Il2CppClass*, const char*);
 using fn_class_from_system_type = Il2CppClass*(*)(const Il2CppType*);
 using fn_class_get_name = const char*(*)(Il2CppClass*);
+using fn_class_get_methods = const MethodInfo*(*)(Il2CppClass*, void**);
+using fn_method_get_name = const char*(*)(const MethodInfo*);
+using fn_method_get_param_count = uint32_t (*)(const MethodInfo*);
+using fn_method_get_param = const Il2CppType*(*)(const MethodInfo*, uint32_t);
+using fn_type_get_name = char*(*)(const Il2CppType*);
 using fn_field_static_get_value = void (*)(FieldInfo*, void*);
 using fn_field_set_value = void (*)(Il2CppObject*, FieldInfo*, void*);
 using fn_field_get_value = void (*)(Il2CppObject*, FieldInfo*, void*);
@@ -45,6 +50,11 @@ struct Api {
     fn_class_get_field_from_name class_get_field_from_name{};
     fn_class_from_system_type class_from_system_type{};
     fn_class_get_name class_get_name{};
+    fn_class_get_methods class_get_methods{};
+    fn_method_get_name method_get_name{};
+    fn_method_get_param_count method_get_param_count{};
+    fn_method_get_param method_get_param{};
+    fn_type_get_name type_get_name{};
     fn_field_static_get_value field_static_get_value{};
     fn_field_set_value field_set_value{};
     fn_field_get_value field_get_value{};
@@ -88,6 +98,11 @@ bool init() {
         ok &= resolve(g.class_get_field_from_name, "il2cpp_class_get_field_from_name");
         ok &= resolve(g.class_from_system_type,    "il2cpp_class_from_system_type");
         ok &= resolve(g.class_get_name,            "il2cpp_class_get_name");
+        ok &= resolve(g.class_get_methods,         "il2cpp_class_get_methods");
+        ok &= resolve(g.method_get_name,           "il2cpp_method_get_name");
+        ok &= resolve(g.method_get_param_count,    "il2cpp_method_get_param_count");
+        ok &= resolve(g.method_get_param,          "il2cpp_method_get_param");
+        ok &= resolve(g.type_get_name,             "il2cpp_type_get_name");
         ok &= resolve(g.field_static_get_value,    "il2cpp_field_static_get_value");
         ok &= resolve(g.field_set_value,           "il2cpp_field_set_value");
         ok &= resolve(g.field_get_value,           "il2cpp_field_get_value");
@@ -120,6 +135,35 @@ const MethodInfo* class_get_method_from_name(Il2CppClass* k, const char* name, i
 FieldInfo* class_get_field_from_name(Il2CppClass* k, const char* name) { return g.class_get_field_from_name(k, name); }
 Il2CppClass* class_from_system_type(const Il2CppType* t) { return g.class_from_system_type(t); }
 const char* class_get_name(Il2CppClass* k) { return g.class_get_name(k); }
+
+const MethodInfo* class_get_methods(Il2CppClass* k, void** iter) {
+    return g.class_get_methods ? g.class_get_methods(k, iter) : nullptr;
+}
+const char* method_get_name(const MethodInfo* m) { return g.method_get_name ? g.method_get_name(m) : nullptr; }
+int32_t method_get_param_count(const MethodInfo* m) { return g.method_get_param_count ? (int32_t)g.method_get_param_count(m) : 0; }
+const Il2CppType* method_get_param(const MethodInfo* m, uint32_t i) { return g.method_get_param ? g.method_get_param(m, i) : nullptr; }
+const char* type_get_name(const Il2CppType* t) { return g.type_get_name ? g.type_get_name(t) : nullptr; }
+
+const MethodInfo* find_method_by_param_suffix(Il2CppClass* k, const char* method_name,
+                                              int argc, int param_index, const char* suffix) {
+    if (!k || !g.class_get_methods) return nullptr;
+    void* iter = nullptr;
+    size_t sfx_len = strlen(suffix);
+    while (const MethodInfo* m = g.class_get_methods(k, &iter)) {
+        const char* n = g.method_get_name(m);
+        if (!n || strcmp(n, method_name) != 0) continue;
+        if ((int)g.method_get_param_count(m) != argc) continue;
+        const Il2CppType* t = g.method_get_param(m, (uint32_t)param_index);
+        if (!t) continue;
+        char* tn = g.type_get_name(t);
+        if (!tn) continue;
+        size_t tn_len = strlen(tn);
+        bool match = tn_len >= sfx_len && strcmp(tn + tn_len - sfx_len, suffix) == 0;
+        free(tn);
+        if (match) return m;
+    }
+    return nullptr;
+}
 
 void field_static_get_value(FieldInfo* f, void* out) { g.field_static_get_value(f, out); }
 void field_set_value(Il2CppObject* obj, FieldInfo* f, void* value) { g.field_set_value(obj, f, value); }

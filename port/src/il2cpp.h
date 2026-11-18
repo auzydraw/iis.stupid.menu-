@@ -36,6 +36,20 @@ FieldInfo* class_get_field_from_name(Il2CppClass* k, const char* name);
 Il2CppClass* class_from_system_type(const Il2CppType* t);
 const char* class_get_name(Il2CppClass* k);
 
+// Iterate every method on a class. Pass nullptr in to begin, reuse the returned iter.
+const MethodInfo* class_get_methods(Il2CppClass* k, void** iter);
+
+// Method reflection.
+const char* method_get_name(const MethodInfo* m);
+int32_t     method_get_param_count(const MethodInfo* m);
+const Il2CppType* method_get_param(const MethodInfo* m, uint32_t index);
+const char* type_get_name(const Il2CppType* t); // caller-owned; free()
+
+// Walk every 2-arg overload of `method_name` on class and pick the one whose
+// Nth parameter type name ends with `suffix` (e.g. "OVRInput/Button").
+const MethodInfo* find_method_by_param_suffix(
+    Il2CppClass* k, const char* method_name, int argc, int param_index, const char* suffix);
+
 void field_static_get_value(FieldInfo* f, void* out);
 void field_set_value(Il2CppObject* obj, FieldInfo* f, void* value);
 void field_get_value(Il2CppObject* obj, FieldInfo* f, void* out);
