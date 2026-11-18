@@ -8,6 +8,10 @@
 
 namespace menu {
 
+// Branding header. Change these two strings to re-brand the in-game banner.
+constexpr const char* kTitle = "ii's Stupid Menu  Native";
+constexpr const char* kMotd  = "built for auzydraw  shouts to Rick and nkhhi";
+
 namespace {
 
 bool s_open = false;
@@ -31,6 +35,11 @@ void log_state() {
         m->name.c_str(), m->enabled ? "ON" : "OFF");
 }
 
+void banner() {
+    LOG("===== %s =====", kTitle);
+    LOG("%s", kMotd);
+}
+
 } // namespace
 
 void tick() {
@@ -40,7 +49,7 @@ void tick() {
     if (s.leftGrip && input::just_pressed_right_secondary()) {
         s_open = !s_open;
         LOG("menu %s", s_open ? "OPEN" : "CLOSE");
-        if (s_open) log_state();
+        if (s_open) { banner(); log_state(); }
     }
     if (!s_open) return;
 
