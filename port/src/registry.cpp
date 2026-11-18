@@ -126,6 +126,8 @@ namespace mods::visuals     { void register_all(); }
 namespace mods::fun         { void register_all(); }
 namespace mods::overpowered { void register_all(); }
 namespace mods::safety      { void register_all(); }
+namespace mods::detected    { void register_all(); }
+namespace mods::credits     { void register_all(); }
 
 namespace registry {
 void register_core() {
@@ -136,6 +138,8 @@ void register_core() {
     mods::visuals::register_all();
     mods::fun::register_all();
     mods::overpowered::register_all();
+    mods::detected::register_all();
+    mods::credits::register_all();
     LOG("registered %zu mods across %zu pages", g_mods.size(), g_pages.size());
 }
 }
